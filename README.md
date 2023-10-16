@@ -1,2 +1,2 @@
 # chess-dapp-verifier
-backend to verify a match result
+Backend to verify a match result. It is part of a solution that experiments an approach to scale Cartesi DApps.
