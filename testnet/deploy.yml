@@ -1,0 +1,33 @@
+version: "3.9"
+
+services:
+  authority-deployer:
+    image: cartesi/rollups-hardhat:1.0.2
+    command:
+      [
+        "deploy",
+        "--tags",
+        "Authority",
+        "--network",
+        "${NETWORK:?undefined NETWORK}",
+        "--export",
+        "/home/node/rollups.json",
+      ]
+    volumes:
+      - ./deployments/${NETWORK:?undefined NETWORK}:/home/node
+    environment:
+      - MNEMONIC=${MNEMONIC:?undefined MNEMONIC}
+      - RPC_URL=${RPC_URL:?undefined RPC_URL}
+
+  dapp-deployer:
+    build: ./dapp-deployer
+    depends_on:
+      authority-deployer:
+        condition: service_completed_successfully
+    volumes:
+      - ../.sunodo/image:/var/opt/cartesi/machine-snapshots/latest:ro
+      - ./deployments:/deployments
+    environment:
+      - MNEMONIC=${MNEMONIC:?undefined MNEMONIC}
+      - NETWORK=${NETWORK:?undefined NETWORK}
+      - RPC_URL=${RPC_URL:?undefined RPC_URL}
