@@ -70,16 +70,21 @@ function getAdversary(player) {
 
 async function emitVoucher(dappAddress, recipient, amount) {
   const methodSignature = AbiCoder.defaultAbiCoder().encode(['address','uint256'], [recipient, amount]);
+  console.log("Method signature is " + methodSignature);
   const transferPayload = TRANSFER_FUNCTION_SELECTOR + methodSignature;
-  voucher = {"destination": dappAddress, "payload": + ethers.hexlify(transferPayload)};
+  console.log("Transfer payload is " + transferPayload);
+  console.log("payload is" +  ethers.hexlify(transferPayload));
+  voucher = {"destination": dappAddress, "payload": ethers.hexlify(transferPayload)};
 
-  const advance_req = await fetch(rollup_server + '/voucher', {
+  const voucher_req = await fetch(rollup_server + '/voucher', {
     method: 'POST',
     headers: {
         'Content-Type': 'application/json'
     },
     body: voucher
   });
+  const json = await voucher_req.json();
+  console.log("Received voucher status " + voucher_req.status + " with body " + JSON.stringify(json));
 }
 
 async function handle_inspect(data) {
