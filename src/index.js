@@ -32,6 +32,7 @@ async function handle_advance(data) {
       await emitVoucher(mainDappAddress,winner,1);
     } else {
       // TODO cover use cases when dispute is requested during the game
+      await emitVoucher(mainDappAddress,winner,1);
     }
 
   } else {
@@ -69,22 +70,21 @@ function getAdversary(player) {
 }
 
 async function emitVoucher(dappAddress, recipient, amount) {
-  const methodSignature = AbiCoder.defaultAbiCoder().encode(['address','uint256'], [recipient, amount]);
-  console.log("Method signature is " + methodSignature);
-  const transferPayload = TRANSFER_FUNCTION_SELECTOR + methodSignature;
-  console.log("Transfer payload is " + transferPayload);
-  console.log("payload is" +  ethers.hexlify(transferPayload));
-  voucher = {"destination": dappAddress, "payload": ethers.hexlify(transferPayload)};
+  const types = ['address','uint256'];
+  const values = [recipient, amount];
+  const methodSignature = AbiCoder.defaultAbiCoder().encode(types, values);
+  const transferPayload = TRANSFER_FUNCTION_SELECTOR + methodSignature.slice(2);
+  voucher = {"destination": dappAddress, "payload": transferPayload};
 
   const voucher_req = await fetch(rollup_server + '/voucher', {
     method: 'POST',
     headers: {
         'Content-Type': 'application/json'
     },
-    body: voucher
+    body: JSON.stringify(voucher),
   });
   const json = await voucher_req.json();
-  console.log("Received voucher status " + voucher_req.status + " with body " + JSON.stringify(json));
+  console.log("Voucher status " + voucher_req.status + " with body " + JSON.stringify(json));
 }
 
 async function handle_inspect(data) {
