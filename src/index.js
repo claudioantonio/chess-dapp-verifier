@@ -1,16 +1,20 @@
 // XXX even though ethers is not used in the code below, it's very likely
 // it will be used by any DApp, so we are already including it here
-const { ethers } = require('ethers');
+const { ethers, AbiCoder } = require('ethers');
 const { Chess } = require('chess.js');
 
 const rollup_server = process.env.ROLLUP_HTTP_SERVER_URL;
 console.log("HTTP rollup_server url is " + rollup_server);
 
 const SHARDING_CONTRACT_ADDRESS = "0x90F79bf6EB2c4f870365E785982E1f101E93b906";
+const TRANSFER_FUNCTION_SELECTOR = "0xa9059cbb";
+const FIRST_MOVE = 0;
+const SECOND_MOVE = 1;
 
 var game = new Chess();
 var moveCounter = 0;
-var currentPlayer;
+var player1;
+var player2;
 var winner;
 
 async function handle_advance(data) {
@@ -19,23 +23,40 @@ async function handle_advance(data) {
   const sender = data["metadata"]["msg_sender"];
   const payload = ethers.toUtf8String(data["payload"]);
 
-  if (sender==SHARDING_CONTRACT_ADDRESS) {
+  if (sender.toLowerCase()==SHARDING_CONTRACT_ADDRESS.toLowerCase()) {
+    console.log("Received Sharding call");
+
     const mainDappAddress = payload;
-    //TODO To create a voucher
-    console.log("Creating voucher for " + winner);
+    if (game.isGameOver()) {
+      console.log("Creating voucher for " + winner);
+      await emitVoucher(mainDappAddress,winner,1);
+    } else {
+      // TODO cover use cases when dispute is requested during the game
+    }
+
   } else {
+    console.log("Received a move");
+
+    if (moveCounter==FIRST_MOVE) {
+      player1 = sender;
+    } else if (moveCounter==SECOND_MOVE) {
+      if (sender.toLowerCase()==player1.toLowerCase()) {
+        console.log("Player 1 cannot play twice in a row");
+        return "reject";
+      }
+      player2 = sender;
+    }
     moveCounter++;
-    currentPlayer = moveCounter % 2 == 0 ? "w" : "b";
 
     try {
       game.move(payload);  
       if (game.isGameOver()) {
-        winner=currentPlayer;
+        winner=sender;
         console.log("Game is over with valid move");
       }
     } catch(illegal_move) {
-      winner=getAdversary(currentPlayer);
-      console.log("Game over by invalid move from " + currentPlayer);
+      winner=getAdversary(sender);
+      console.log("Game is over by invalid move from " + sender);
       return "reject";
     }
   }
@@ -44,7 +65,21 @@ async function handle_advance(data) {
 }
 
 function getAdversary(player) {
-  return player == "w" ? "b" : "w";
+  return player.toLowerCase() == player1.toLowerCase() ? player2 : player1;
+}
+
+async function emitVoucher(dappAddress, recipient, amount) {
+  const methodSignature = AbiCoder.defaultAbiCoder().encode(['address','uint256'], [recipient, amount]);
+  const transferPayload = TRANSFER_FUNCTION_SELECTOR + methodSignature;
+  voucher = {"destination": dappAddress, "payload": + ethers.hexlify(transferPayload)};
+
+  const advance_req = await fetch(rollup_server + '/voucher', {
+    method: 'POST',
+    headers: {
+        'Content-Type': 'application/json'
+    },
+    body: voucher
+  });
 }
 
 async function handle_inspect(data) {
