@@ -7,7 +7,8 @@ const rollup_server = process.env.ROLLUP_HTTP_SERVER_URL;
 console.log("HTTP rollup_server url is " + rollup_server);
 
 const SHARDING_CONTRACT_ADDRESS = "0x90F79bf6EB2c4f870365E785982E1f101E93b906";
-const TRANSFER_FUNCTION_SELECTOR = "0xa9059cbb";
+const INPUTBOX_CONTRACT_ADDRESS = "0x59b22D57D4f067708AB0c00552767405926dc768";
+const INPUTBOX_ADDINPUT_SELECTOR = "0x1789cd63";
 
 var game = new Chess();
 var winner;
@@ -24,10 +25,13 @@ async function handle_advance(data) {
     const mainDappAddress = payload;
     if (game.isGameOver()) {
       console.log("Creating voucher for " + winner);
-      await emitVoucher(mainDappAddress,winner,1);
+      await emitVoucher(INPUTBOX_CONTRACT_ADDRESS,mainDappAddress,winner);
     } else {
-      // TODO cover use cases when dispute is requested during the game
-      await emitVoucher(mainDappAddress,winner,1);
+      if (winner==null) {
+        console.log("Game is not over yet and no illegal move was provided. Why are you calling me?");
+      } else {
+        await emitVoucher(INPUTBOX_CONTRACT_ADDRESS,mainDappAddress,winner);
+      }
     }
 
   } else {
@@ -62,12 +66,12 @@ function getAdversary(player) {
   return player.toLowerCase() == "w" ? "b" : "w";
 }
 
-async function emitVoucher(dappAddress, recipient, amount) {
-  const types = ['address','uint256'];
-  const values = [recipient, amount];
+async function emitVoucher(inputBoxAddress, mainDappAddress, winner) {
+  const types = ['address','bytes'];
+  const values = [mainDappAddress,  ethers.toUtf8Bytes(winner)];
   const methodSignature = AbiCoder.defaultAbiCoder().encode(types, values);
-  const transferPayload = TRANSFER_FUNCTION_SELECTOR + methodSignature.slice(2);
-  voucher = {"destination": dappAddress, "payload": transferPayload};
+  const transferPayload = INPUTBOX_ADDINPUT_SELECTOR + methodSignature.slice(2);
+  voucher = {"destination": inputBoxAddress, "payload": transferPayload};
 
   const voucher_req = await fetch(rollup_server + '/voucher', {
     method: 'POST',
