@@ -8,13 +8,8 @@ console.log("HTTP rollup_server url is " + rollup_server);
 
 const SHARDING_CONTRACT_ADDRESS = "0x90F79bf6EB2c4f870365E785982E1f101E93b906";
 const TRANSFER_FUNCTION_SELECTOR = "0xa9059cbb";
-const FIRST_MOVE = 0;
-const SECOND_MOVE = 1;
 
 var game = new Chess();
-var moveCounter = 0;
-var player1;
-var player2;
 var winner;
 
 async function handle_advance(data) {
@@ -38,27 +33,25 @@ async function handle_advance(data) {
   } else {
     console.log("Received a move");
 
-    if (moveCounter==FIRST_MOVE) {
-      player1 = sender;
-    } else if (moveCounter==SECOND_MOVE) {
-      if (sender.toLowerCase()==player1.toLowerCase()) {
-        console.log("Player 1 cannot play twice in a row");
-        return "reject";
-      }
-      player2 = sender;
-    }
-    moveCounter++;
+    if (game.isGameOver()) return "reject"
 
+    var currentPlayer = game.turn();
     try {
       game.move(payload);  
-      if (game.isGameOver()) {
-        winner=sender;
-        console.log("Game is over with valid move");
-      }
     } catch(illegal_move) {
-      winner=getAdversary(sender);
-      console.log("Game is over by invalid move from " + sender);
+      winner = getAdversary(currentPlayer);
+      console.log("Game is over by invalid move from " + currentPlayer);
       return "reject";
+    }
+
+    if (game.isGameOver()) {
+      if (game.isCheckmate()) {
+        winner = currentPlayer;
+        console.log("Game over in checkmate. Winner is " + currentPlayer);
+      } else {
+        console.log("Game over in draw.");
+        winner="d";
+      }  
     }
   }
 
@@ -66,7 +59,7 @@ async function handle_advance(data) {
 }
 
 function getAdversary(player) {
-  return player.toLowerCase() == player1.toLowerCase() ? player2 : player1;
+  return player.toLowerCase() == "w" ? "b" : "w";
 }
 
 async function emitVoucher(dappAddress, recipient, amount) {
