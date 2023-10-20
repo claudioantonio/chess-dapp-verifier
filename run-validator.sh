@@ -14,15 +14,23 @@
 # Use docker-compose to start the Cartesi Rollups environment for a given DApp in production mode
 
 if [ ! $1 ]; then
-  echo "Usage: "$0" <network>"
+  echo "Usage: "$0" <network> [dapp]"
   echo "where:"
   echo "- <network> must match a supported network name (e.g., 'sepolia')"
+  echo "- [dapp] overrides the DApp address in dapp.json"
   echo "notes:"
   echo "- this requires environment variables defining the MNEMONIC, RPC_URL and WSS_URL to use"
   exit 1
 fi
 
 network=$1
+
+# override DApp address if specified
+dapp=$2
+if [ $dapp ]; then
+  echo "Overriding address in testnet/deployments/sepolia/dapp.json..."
+  sudo sed -i 's/"address": .*/"address": "'$dapp'",/' testnet/deployments/sepolia/dapp.json
+fi
 
 # shut down validator node if CTRL+C is pressed
 compose_down () {
