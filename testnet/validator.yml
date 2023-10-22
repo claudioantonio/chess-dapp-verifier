@@ -78,7 +78,7 @@ services:
             TX_DEFAULT_CONFIRMATIONS: 2
 
             # state-server
-            SF_GENESIS_BLOCK: 1
+            SF_GENESIS_BLOCK: "${GENESIS_BLOCK:-1}"
             SF_SAFETY_MARGIN: 1
             BH_HTTP_ENDPOINT: ${RPC_URL:?undefined RPC_URL}
             BH_WS_ENDPOINT: ${WSS_URL:?undefined WSS_URL}
