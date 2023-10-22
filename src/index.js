@@ -17,12 +17,11 @@ async function handle_advance(data) {
   console.log("Received advance request data " + JSON.stringify(data));
 
   const sender = data["metadata"]["msg_sender"];
-  const payload = ethers.toUtf8String(data["payload"]);
 
   if (sender.toLowerCase()==SHARDING_CONTRACT_ADDRESS.toLowerCase()) {
     console.log("Received Sharding call");
 
-    const mainDappAddress = payload;
+    const mainDappAddress = data["payload"];
     if (game.isGameOver()) {
       console.log("Creating voucher for " + winner);
       await emitVoucher(
@@ -49,6 +48,7 @@ async function handle_advance(data) {
 
     if (game.isGameOver()) return "reject"
 
+    const payload = ethers.toUtf8String(data["payload"]);
     var currentPlayer = game.turn();
     try {
       game.move(payload);  
